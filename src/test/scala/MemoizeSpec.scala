@@ -37,7 +37,7 @@ class MemoizeSpec extends AnyFlatSpec with must.Matchers {
     f(using passEq)(1) mustEqual f(using passEq)(2)
   }
 
-  it must "memoize implicit arguments the same way it treats normal arguments" in {
+  it must "memoize implicit arguments the same way it does for normal arguments" in {
     val f = (x: Int) => (y: Int) ?=> x + y
     given Int = 5
     val g = memoize(f)
@@ -45,9 +45,13 @@ class MemoizeSpec extends AnyFlatSpec with must.Matchers {
   }
 
   it must "memoize a polymorphic function value if their type parameters are applied upon memoization" in {
-    val poly = [X, Y] => (x: X, y: Y) => x == y
-    val f = memoize(poly[Int, Int])
-    f(1, 1) mustEqual poly(1, 1)
+    val poly1 = [X, Y] => (x: X, y: Y) => x == y
+    val f = memoize(poly1[Int, Int])
+    f(1, 1) mustEqual poly1(1, 1)
+    
+    val poly2 = [X] => (x: X) => [Y] => (y: Y) => x == y
+    val g = memoize(poly2(_: Int)[Int])
+    g(1)(1) mustEqual poly2(1)(1)
   }
 
   """
@@ -56,9 +60,7 @@ class MemoizeSpec extends AnyFlatSpec with must.Matchers {
     val factorial = memoize.define[Long, Long] { f => n =>
       n match
         case n if n < 0 =>
-          throw ArithmeticException(
-            "Factorial is only computable for natural numbers"
-          )
+          throw ArithmeticException()
         case 0 | 1 => 1
         case _     => n * f(n - 1)
     }
@@ -66,7 +68,7 @@ class MemoizeSpec extends AnyFlatSpec with must.Matchers {
     (15 * factorial(14)) mustEqual factorial(15)
   }
 
-  it must "allow the use of other memoized functions inside their definition body" in {
+  it must "allow the use of other memoized functions inside their body definition" in {
     val memId = memoize(identity[Long])
     val factorial = memoize.define[Long, Long] { f => n =>
       n match
@@ -80,20 +82,21 @@ class MemoizeSpec extends AnyFlatSpec with must.Matchers {
   it should "be significantly faster to compute the fibonacci sequence on large inputs" in {
     def fibb(n: BigInt): BigInt =
       n match
-        case n if n <= 0 =>
+        case n if n < 0 =>
           throw ArithmeticException()
+        case 0 => 0
         case 1 => 1
-        case 2 => 1
         case _ => fibb(n - 1) + fibb(n - 2)
 
     val memoFibb = memoize.define[BigInt, BigInt] { f => n =>
       n match
-        case n if n <= 0 =>
+        case n if n < 0 =>
           throw ArithmeticException()
+        case 0 => 0
         case 1 => 1
-        case 2 => 1
         case _ => f(n - 1) + f(n - 2)
     }
+
     (25 to 35) foreach { n =>
       val (r1, time1) = benchmark { fibb(n) }
       val (r2, time2) = benchmark { memoFibb(n) }

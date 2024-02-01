@@ -9,11 +9,11 @@ import scala.annotation.experimental
 import scala.util.Success
 import java.util.concurrent.Callable
 
-abstract class Memo[A, B]:
+abstract class Memo[A, +B]:
   def apply(using ev: Eq[A]): B
 
 object Memoize:
-  private def placeholder[A]: A = throw Exception("All references to `placeholder` must be eliminated by the end of compilation!")
+  private def placeholder[A]: A = throw Exception("All references to `placeholder` must be eliminated by the end of compilation. This is a bug")
 
   def memoize(f: Expr[Any])(using q: Quotes): Expr[Any] =
     import q.reflect.*
@@ -22,7 +22,7 @@ object Memoize:
     widened.asType match
       case '[t] =>
         '{ ${ f.asExprOf[t] }: t } match
-          case '{ $g: PolyFunction } => throw new Exception("Memoization of polymorphic function values without their type parameters applied are not yet supported")
+          case '{ $g: PolyFunction } => memoizePoly(g)
           case g =>
             TypeRepr.of[t] match
               case AppliedType(
@@ -216,3 +216,34 @@ object Memoize:
       case '{ $x: EmptyTuple } => Nil
       case '{ $x: h *: t } => '{ ${ x }.head: h } :: untupled('{ $x.tail: t })
       case _               => List(e)
+
+  private def memoizePoly(e: Expr[PolyFunction]): Expr[Any] =
+    throw new Exception("Memoization of polymorphic function values without their type parameters applied are not yet supported")      
+
+  // @experimental
+  // def newPolyImpl(using Quotes): Expr[PolyFunction] = 
+  //   import quotes.reflect.*
+
+  //   val name: String = "$anon"
+  //   val parents = List(TypeTree.of[Object], TypeTree.of[PolyFunction])
+
+  //   def decls(cls: Symbol): List[Symbol] =
+  //     List(
+  //       Symbol.newMethod(
+  //         cls,
+  //         "apply",
+  //         PolyType(List("X"))(_ => List(TypeBounds.empty), polyType => {
+  //           val typeParam = polyType.param(0)
+  //           MethodType(List("a"))(_ => List(typeParam), _ => typeParam)
+  //         })
+  //       )
+  //     )
+
+  //   val cls = Symbol.newClass(Symbol.spliceOwner, name, parents = parents.map(_.tpe), decls, selfType = None)
+  //   val applySym = cls.declaredMethod("apply").head
+
+  //   // argss=List(List(TypeTree[TypeRef(NoPrefix,type X)]), List(Ident(a)))
+  //   val applyDef = DefDef(applySym, argss => Some(argss(1)(0).asInstanceOf[Term]))
+  //   val clsDef = ClassDef(cls, parents, body = List(applyDef))
+  //   val closure = Block(List(clsDef), Apply(Select(New(TypeIdent(cls)), cls.primaryConstructor), Nil))
+  //   closure.asExprOf[PolyFunction]

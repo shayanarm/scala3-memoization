@@ -22,7 +22,7 @@ object Memoize:
     widened.asType match
       case '[t] =>
         '{ ${ f.asExprOf[t] }: t } match
-          case '{ $g: PolyFunction } => throw new Exception("Memoization of polymorphic functions without their type parameters applied are not yet supported")
+          case '{ $g: PolyFunction } => throw new Exception("Memoization of polymorphic function values without their type parameters applied are not yet supported")
           case g =>
             TypeRepr.of[t] match
               case AppliedType(

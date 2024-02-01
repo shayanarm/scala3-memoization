@@ -77,7 +77,7 @@ class MemoizeSpec extends AnyFlatSpec with must.Matchers {
     (15 * factorial(14)) mustEqual factorial(15)
   }
 
-  it should "be significantly faster to compute the fibonacci sequence" in {
+  it should "be significantly faster to compute the fibonacci sequence on large inputs" in {
     def fibb(n: BigInt): BigInt =
       n match
         case n if n <= 0 =>
@@ -94,10 +94,11 @@ class MemoizeSpec extends AnyFlatSpec with must.Matchers {
         case 2 => 1
         case _ => f(n - 1) + f(n - 2)
     }
-
-    val (r1, time1) = benchmark { fibb(35) }
-    val (r2, time2) = benchmark { memoFibb(35) }
-    assert(r1 == r2)
-    assert(time2 < time1)
+    (25 to 35) foreach { n =>
+      val (r1, time1) = benchmark { fibb(n) }
+      val (r2, time2) = benchmark { memoFibb(n) }
+      assert(r1 == r2)
+      assert(time2 < time1)
+    }
   }
 }

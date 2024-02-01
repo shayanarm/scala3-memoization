@@ -1,0 +1,18 @@
+version: "3"
+services:
+  development:
+    build:
+      context: .
+    networks:
+      - memoize
+    # ulimits:
+    #   nofile:
+    #     soft: "99999"
+    #     hard: "99999"      
+    tty: true
+    stdin_open: true      
+      
+
+networks:
+  memoize:
+    driver: bridge

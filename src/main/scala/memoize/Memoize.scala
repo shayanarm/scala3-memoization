@@ -8,6 +8,7 @@ import scala.PolyFunction
 import scala.annotation.experimental
 import scala.util.Success
 import java.util.concurrent.Callable
+import scala.util.DynamicVariable
 
 abstract class Memo[A, +B]:
   def apply(using ev: Eq[A]): B
@@ -17,6 +18,7 @@ object Memoize:
     "All references to `placeholder` must be eliminated by the end of compilation. This is a bug"
   )
 
+  @experimental
   private def memoType(tp: Type[_])(using q: Quotes) =
     import q.reflect.*
     tp match
@@ -49,9 +51,9 @@ object Memoize:
       case '{ $x: h *: t } => '{ ${ x }.head: h } :: untupled('{ $x.tail: t })
       case _               => List(e)
 
+  @experimental
   def memoize(f: Expr[Any])(using q: Quotes): Expr[Any] =
     import q.reflect.*
-
     val widened = f.asTerm.tpe.widen
     widened.asType match
       case '[t] =>
@@ -73,6 +75,7 @@ object Memoize:
                 memoizeMono(g)(args, true, returnType.head)
               case _ => g
 
+  @experimental
   private def memoizeMono(f: Expr[Any])(using
       q: Quotes
   )(
@@ -119,33 +122,106 @@ object Memoize:
                           }
                       }
                     }
+  private def foldTypeRepr[A](using q: Quotes)(
+      f: PartialFunction[q.reflect.TypeRepr, A]
+  )(in: q.reflect.TypeRepr): List[A] =
+    import q.reflect.*
+    inline def go(a: q.reflect.TypeRepr): List[A] =
+      foldTypeRepr(f)(a)
+    val out = in match
+      case TermRef(tpe, n)           => go(tpe)
+      case TypeRef(tpe, name)        => Nil
+      case _: ConstantType           => Nil
+      case SuperType(tpe1, tpe2)     => go(tpe1) ++ go(tpe2)
+      case Refinement(tpe1, n, tpe2) => go(tpe1) ++ go(tpe2)
+      case AppliedType(rep, args) =>
+        go(rep) ++ args.map(go(_)).flatten
+      case AnnotatedType(tpe, term) => go(tpe)
+      case AndType(l, r)            => go(l) ++ go(r)
+      case OrType(l, r)             => go(l) ++ go(r)
+      case MatchType(tpe1, tpe2, args) =>
+        go(tpe1) ++ go(tpe2) ++ args.map(go(_)).flatten
+      case ByNameType(tpe)   => go(tpe)
+      case ParamRef(_m, idx) => Nil
+      case _: ThisType       => Nil
+      case _: RecursiveThis  => Nil
+      // case RecursiveType(tpe)     => RecursiveType(_ => go(tpe))
+      // case _: MethodType          => in
+      // case _: PolyType            => in
+      // case _: TypeLambda          => in
+      // case MatchCase(tpe1, tpe2)  => MatchCase(go(tpe1), go(tpe2))
+      case TypeBounds(tpe1, tpe2) => go(tpe1) ++ go(tpe2)
+      case _: NoPrefix            => Nil
+      case tree => throw MatchError(tree.show(using Printer.TypeReprStructure))
 
-  // private def rebindParams(using q: Quotes)(ptNew: q.reflect.PolyType)(in: q.reflect.TypeRepr): q.reflect.TypeRepr =
-  //   import q.reflect.*
-  //   def go(in: TypeRepr): TypeRepr = in match
-  //     case TermRef(tpe, n) => TermRef(go(tpe), n)
-  //     case _: TypeRef => in
-  //     case _: ConstantType => in
-  //     case SuperType(tpe1, tpe2) => SuperType(go(tpe1), go(tpe2))
-  //     case Refinement(tpe1, n, tpe2) => Refinement(go(tpe1), n , go(tpe2))
-  //     case AppliedType(rep, args) => Applied(TypeTree.of(using go(rep).asType), args.map(a => TypeTree.of(using go(a).asType))).tpe
-  //     case AnnotatedType(tpe, term) => AnnotatedType(go(tpe), term)
-  //     case AndType(l, r) => AndType(go(l), go(r))
-  //     case OrType(l, r) => OrType(go(l), go(r))
-  //     case MatchType(tpe1, tpe2, args) => MatchType(go(tpe1), go(tpe2), args.map(go))
-  //     case ByNameType(tpe) => ByNameType(go(tpe))
-  //     case ParamRef(_m, idx) => ptNew.param(idx)
-  //     case _: ThisType => in
-  //     case _: RecursiveThis => in
-  //     case RecursiveType(tpe) => RecursiveType(_ => go(tpe))
-  //     case _: MethodType => in
-  //     case _: PolyType => in
-  //     case _: TypeLambda => in
-  //     case MatchCase(tpe1, tpe2) => MatchCase(go(tpe1), go(tpe2))
-  //     case TypeBounds(tpe1, tpe2) => TypeBounds(go(tpe1), go(tpe2))
-  //     case _: NoPrefix => in
-  //   go(in)
+    f.andThen(_ :: out).applyOrElse(in, _ => out)
 
+  private def transformTypeRepr(using q: Quotes)(
+      f: PartialFunction[q.reflect.TypeRepr, q.reflect.TypeRepr]
+  )(in: q.reflect.TypeRepr): q.reflect.TypeRepr =
+    import q.reflect.*
+    inline def go(a: q.reflect.TypeRepr): q.reflect.TypeRepr =
+      transformTypeRepr(f)(a)
+    val out = in match
+      case TermRef(tpe, n)           => TermRef(go(tpe), n)
+      case TypeRef(tpe, name)        => in
+      case _: ConstantType           => in
+      case SuperType(tpe1, tpe2)     => SuperType(go(tpe1), go(tpe2))
+      case Refinement(tpe1, n, tpe2) => Refinement(go(tpe1), n, go(tpe2))
+      case AppliedType(rep, args) =>
+        AppliedType(
+          go(rep),
+          args.map(go(_))
+        )
+      case AnnotatedType(tpe, term) => AnnotatedType(go(tpe), term)
+      case AndType(l, r)            => AndType(go(l), go(r))
+      case OrType(l, r)             => OrType(go(l), go(r))
+      case MatchType(tpe1, tpe2, args) =>
+        MatchType(go(tpe1), go(tpe2), args.map(go(_)))
+      case ByNameType(tpe)   => ByNameType(go(tpe))
+      case ParamRef(_m, idx) => in
+      case _: ThisType       => in
+      case _: RecursiveThis  => in
+      // case RecursiveType(tpe)     => RecursiveType(_ => go(tpe))
+      // case _: MethodType          => in
+      // case _: PolyType            => in
+      // case _: TypeLambda          => in
+      // case MatchCase(tpe1, tpe2)  => MatchCase(go(tpe1), go(tpe2))
+      case TypeBounds(tpe1, tpe2) => TypeBounds(go(tpe1), go(tpe2))
+      case _: NoPrefix            => in
+      case tree => throw MatchError(tree.show(using Printer.TypeReprStructure))
+    f.applyOrElse(out, identity)
+
+  private def rebindParams(using
+      q: Quotes
+  )(ptOld: q.reflect.PolyType, ptNew: q.reflect.PolyType)(
+      in: q.reflect.TypeRepr
+  ): q.reflect.TypeRepr =
+    import q.reflect.*
+    transformTypeRepr { case ref @ ParamRef(_m, idx) =>
+      if ptNew.paramNames.contains(
+          ref.show(using Printer.TypeReprAnsiCode)
+        )
+      then ptNew.param(idx)
+      else ref
+    }(in)
+
+  private def fixReturnType(using
+      q: Quotes
+  )(reference: q.reflect.TypeRepr)(
+      in: q.reflect.TypeRepr
+  ): q.reflect.TypeRepr =
+    import q.reflect.*
+    val pool = foldTypeRepr { case tr @ TypeRef(NoPrefix(), x) =>
+      tr
+    }(reference.widen)
+    transformTypeRepr { case ref @ ParamRef(_m, idx) =>
+      pool.find { case TypeRef(_, name) =>
+        name == ref.show(using Printer.TypeReprAnsiCode)
+      }.get
+    }(in)
+
+  @experimental
   private def monoMemoImpl[I, O](
       f: Expr[Any],
       in: Expr[I],
@@ -222,36 +298,131 @@ object Memoize:
           }
         }
 
+  @experimental
   private def memoizePoly(e: Expr[Any])(using q: Quotes): Expr[Any] =
     import q.reflect.*
-    throw new Exception(
-      e.asTerm.show(using Printer.TreeStructure)
+    e.asTerm.tpe match
+      case Refinement(
+            TypeRef(ThisType(TypeRef(NoPrefix(), "scala")), "PolyFunction"),
+            "apply",
+            pt: PolyType
+          ) =>
+        newPolyImpl(e.asTerm)(pt)
+      case t => throw MatchError(t.show(using Printer.TypeReprStructure))
+
+  @experimental
+  def newPolyImpl(using q: Quotes)(original: q.reflect.Term)(
+      ptOld: q.reflect.PolyType
+  ): Expr[PolyFunction] =
+    import q.reflect.*
+    val (params, bounds, varNames, varTypes, returnType) = ptOld match
+      case PolyType(
+            params,
+            bounds,
+            MethodType(
+              varNames,
+              varTypes,
+              returnType
+            )
+          ) =>
+        (params, bounds, varNames, varTypes, returnType)
+
+    val name: String = "$anon"
+    val parents = List(TypeTree.of[Object], TypeTree.of[PolyFunction])
+    val poly = PolyType(params)(
+      pt =>
+        bounds.map(b => rebindParams(ptOld, pt)(b).asInstanceOf[TypeBounds]),
+      pt => {
+        val args = varTypes.map(rebindParams(ptOld, pt))
+        val tupledArg = tupleType(args.map(_.asType))
+        val rt = rebindParams(ptOld, pt)(returnType)
+        MethodType(List("x", "y"))(
+          mt => {
+            tupledArg match
+              case '[tup] =>
+                args
+          },
+          mt => {
+            (tupledArg, memoType(rt.asType)) match
+              case ('[tup], '[r]) => TypeRepr.of[(Typeable[tup], Eq[tup]) ?=> r]
+          }
+        )
+      }
     )
 
-  // @experimental
-  // def newPolyImpl(using Quotes): Expr[PolyFunction] =
-  //   import quotes.reflect.*
+    val cls = Symbol.newClass(
+      Symbol.spliceOwner,
+      name,
+      parents = parents.map(_.tpe),
+      cls =>
+        List(
+          Symbol.newMethod(
+            cls,
+            "apply",
+            poly
+          )
+        ),
+      selfType = None
+    )
+    val applySym = cls.declaredMethod("apply").head
+    // val memo = '{mutable.ArrayBuffer[(Any, Any)]()}
+    val memo = '{ mutable.ArrayBuffer[(data.Dynamic, Any)]() }
+    val applyDef =
+      DefDef(
+        applySym,
+        argss => {
+          // given q: Quotes = applySym.asQuotes
+          // import q.reflect.*
+          val args = argss(1).map(_.asExpr)
+          val tupledArgs = tupled(args) 
+          val rt = poly.resType match
+            case MethodType(_, _, rt) => fixReturnType(tupledArgs.asTerm.tpe)(rt)
 
-  //   val name: String = "$anon"
-  //   val parents = List(TypeTree.of[Object], TypeTree.of[PolyFunction])
+          rt.asType match
+            case ('[(Typeable[i], _) ?=> o]) =>
+              val body = '{ (tpbl: Typeable[i], eqlt: Eq[i]) ?=>
+                {
+                  val in = ${tupledArgs.asExprOf[i]}
+                  $memo.synchronized {
+                    $memo
+                      .collectFirst {
+                        case (i, out)
+                            if i
+                              .safeCast[i]
+                              .exists(i =>
+                                eqlt.eqv(i, in)
+                              ) =>
+                          out.asInstanceOf[o]
+                      }
+                      .getOrElse {
+                        val out = ${
+                          val applied = Select
+                            .unique(original, "apply")
+                            .appliedToTypeTrees(
+                              argss(0).map(_.asInstanceOf[TypeTree])
+                            )
+                            .appliedToArgs(untupled('in).map(_.asTerm))
+                          memoize(
+                            applied.asExpr
+                          ).asExprOf[o]
+                        }
 
-  //   def decls(cls: Symbol): List[Symbol] =
-  //     List(
-  //       Symbol.newMethod(
-  //         cls,
-  //         "apply",
-  //         PolyType(List("X"))(_ => List(TypeBounds.empty), polyType => {
-  //           val typeParam = polyType.param(0)
-  //           MethodType(List("a"))(_ => List(typeParam), _ => typeParam)
-  //         })
-  //       )
-  //     )
+                        $memo.append((data.Dynamic[i](in), out))
+                        out
+                      }
+                  }
+                }
+              }
+              Some(
+                body.asTerm
+              )
+            case other => throw MatchError(TypeRepr.of(using other).widen.show(using Printer.TypeReprAnsiCode))
+        }
+      )
+    val clsDef = ClassDef(cls, parents, body = List(applyDef))
+    val closure = Block(
+      List(memo.asTerm, clsDef),
+      Apply(Select(New(TypeIdent(cls)), cls.primaryConstructor), Nil)
+    )
 
-  //   val cls = Symbol.newClass(Symbol.spliceOwner, name, parents = parents.map(_.tpe), decls, selfType = None)
-  //   val applySym = cls.declaredMethod("apply").head
-
-  //   // argss=List(List(TypeTree[TypeRef(NoPrefix,type X)]), List(Ident(a)))
-  //   val applyDef = DefDef(applySym, argss => Some(argss(1)(0).asInstanceOf[Term]))
-  //   val clsDef = ClassDef(cls, parents, body = List(applyDef))
-  //   val closure = Block(List(clsDef), Apply(Select(New(TypeIdent(cls)), cls.primaryConstructor), Nil))
-  //   closure.asExprOf[PolyFunction]
+    closure.asExprOf[PolyFunction]

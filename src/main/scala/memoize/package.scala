@@ -1,4 +1,5 @@
 package object memoize {
+  @scala.annotation.experimental
   transparent inline def apply(inline e: Any): Any =
     ${ Memoize.memoize('e) }
 

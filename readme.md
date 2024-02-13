@@ -60,7 +60,7 @@ fib(35)
 //       throw ArithmeticException()
 //     case _ => fib(n - 1) + fib(n - 2)
 
-// val badMemo = fib.memoized
+// val badFib = fib.memoized
 ```
 The memoization is backed by two choices of data structures: 
 * ```scala.collections.mutable.WeakHashMap``` 

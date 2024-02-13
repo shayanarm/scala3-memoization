@@ -6,5 +6,5 @@ package object memoization {
 
   extension [F](f: F)
     @scala.annotation.experimental
-    transparent inline def memoized[S](using strategy: S = scala.collection.mutable.WeakHashMap) = ${ Macros.memoizeImpl[S]('f) }
+    transparent inline def memoized[S](using storage: S = scala.collection.mutable.WeakHashMap) = ${ Macros.memoizeImpl[S]('f) }
 }

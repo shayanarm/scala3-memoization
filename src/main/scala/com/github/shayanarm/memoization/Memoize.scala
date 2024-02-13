@@ -1,4 +1,4 @@
-package memoization
+package com.github.shayanarm.memoization
 
 import scala.collection.mutable
 

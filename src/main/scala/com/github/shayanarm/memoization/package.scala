@@ -1,3 +1,5 @@
+package com.github.shayanarm
+
 import memoization.quoted.Macros
 
 package object memoization {

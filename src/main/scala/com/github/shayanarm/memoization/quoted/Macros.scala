@@ -1,4 +1,4 @@
-package memoization.quoted
+package com.github.shayanarm.memoization.quoted
 
 import scala.reflect.Manifest
 import scala.collection.mutable
@@ -6,7 +6,7 @@ import scala.quoted.*
 import scala.PolyFunction
 import scala.annotation.experimental
 import scala.util.Success
-import memoization.*
+import com.github.shayanarm.memoization.Storage
 
 object Macros:
   private def resolveStorage[S](using

@@ -1,6 +1,4 @@
-package com.github.shayan.memoization
-
-import memoization._
+import com.github.shayanarm.memoization._
 import org.scalatest._
 import flatspec._
 import matchers._

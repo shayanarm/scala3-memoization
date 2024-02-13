@@ -28,7 +28,7 @@ But, there is also a way to memoize polymorphic functions without creating separ
 val efficientAll: [X] => (a: X) => X = ([X] => (a: X) => expensive[X](a)).memoized
 efficientAll(5) // This call will compute,
 efficientAll("foo") // so does this,
-efficientAll(5) // but not this,
+efficientAll(5) // but neither this,
 efficientAll("foo") // nor this
 ```
 Your function signature will remain untouched. Context arguments are treated as normal arguments and are still memoized:

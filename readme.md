@@ -25,10 +25,10 @@ efficientString("foo") // The second call will not
 But, there is also a way to memoize polymorphic functions without creating separate instances for each parameter set unlike above:
 ```scala
 val efficientAll: [X] => (a: X) => X = ([X] => (a: X) => expensive[X](a)).memoized
-efficientAll(5) // This call will compute  
-efficientAll(5) // This will not 
-efficientAll("foo") // This call will compute  
-efficientAll("foo") // This will not
+efficientAll(5) // This call will compute,
+efficientAll("foo") // so does this,
+efficientAll(5) // but not this,
+efficientAll("foo") // nor this
 ```
 Your function signature will remain untouched. Context arguments are treated as normal arguments and are still memoized:
 ```scala

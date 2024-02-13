@@ -36,7 +36,7 @@ Your function signature will remain untouched. Context arguments are treated as 
 val f: Int => Int ?=> Int = (((x: Int) => (y: Int) ?=> expensive(x + y))).memoized
 f(42)(using 21)
 ```
-* You may partially apply your function to exclude any parameter from being memoized.
+* You may partially apply your function befor calling `.memoize` to exclude any parameter from being memoized.
 * Curried functions are also recursively memorized.
 
 What if you need to memoize a recursive function definition? Then, use the lazy val technique to define your memoized function:

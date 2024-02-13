@@ -291,7 +291,7 @@ object Macros:
     import quotes.reflect.*
     val closureType = original.tpe
     // We cannot create the context functions using the reflect API. We can however,
-    // Do so using quotations('{...}), so we will cover some arities of context functions to a
+    // Do so using quotations ('{...}), so we will cover some arities of context functions to a
     // reasonable extent and a little beyond
     refinementType match
       case mt @ MethodType(_, args, rt) if closureType.isContextFunctionType =>

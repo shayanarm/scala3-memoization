@@ -59,5 +59,5 @@ The memoization is backed by two choices of data structures:
 The default choice is ```WeakHashMap``` as it reduces the risk of memory leaks. You may however, change that by:
 ```scala
 f.memoized(using scala.collections.mutable.HashMap)
-f.memoized(using scala.collections.mutable.WeakHashMap) // this is already the default if unspecified
+f.memoized(using scala.collections.mutable.WeakHashMap) // Already the default if unspecified
 ```

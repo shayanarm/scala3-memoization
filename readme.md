@@ -52,7 +52,7 @@ lazy val fib: Long => Long = { (n: Long) =>
 fib(35)
 // The unmemoized version runs 29860703 times on n = 35
 // --- WARNING ---
-// Don't do it like this:
+// Do not do it like this:
 // def fib(n: Long): Long =
 //   n match
 //     case 0 | 1 => n

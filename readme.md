@@ -61,4 +61,4 @@ The default choice is ```WeakHashMap``` as it reduces the risk of memory leaks. 
 f.memoized(using scala.collections.mutable.HashMap)
 f.memoized(using scala.collections.mutable.WeakHashMap) // Already the default if unspecified
 ```
-The library internally updates and reads the HashMap in a thread-safe manner.
+The library internally updates and reads the hashmaps in a thread-safe manner.

@@ -73,7 +73,7 @@ object Macros:
             "apply",
             pt: PolyType
           ) if tr =:= TypeRepr.of[PolyFunction] =>
-        memoizeRefinement(widened.asTerm, storage)(tr, pt)        
+        memoizeRefinement(widened.asTerm, storage)(tr, pt)
       case tpe if tpe.isFunctionType =>
         throw MatchError(
           widened.asTerm.tpe.show(using Printer.TypeReprStructure)
@@ -100,8 +100,7 @@ object Macros:
     if original.tpe.isContextFunctionType then
       return memoizeContextFunction(original, storageType)(
         args,
-        rt,
-        None
+        rt
       )
 
     val closureType = original.tpe.widen
@@ -167,8 +166,7 @@ object Macros:
       Quotes
   )(original: quotes.reflect.Term, storageType: quotes.reflect.TypeRepr)(
       args: List[quotes.reflect.TypeRepr],
-      rt: quotes.reflect.TypeRepr,
-      refinementType: Option[quotes.reflect.MethodType]
+      rt: quotes.reflect.TypeRepr
   ): Expr[Any] =
     import quotes.reflect.*
     def withStorage[A](using Type[A])(f: Expr[Storage => A]): Expr[A] =
@@ -181,7 +179,7 @@ object Macros:
         ${ Expr.betaReduce('{ $f(storage) }) }
       }
 
-    val result = (args.map(_.asType), rt.asType) match
+    (args.map(_.asType), rt.asType) match
       case (List('[t1]), '[r]) =>
         withStorage('{ (storage: Storage) => (x1: t1) ?=>
           ${
@@ -273,14 +271,6 @@ object Macros:
         throw Exception(
           s"Memoization of the supplied context function with the arity of ${args.length} is not supported"
         )
-    refinementType.fold(result) { mt =>
-      Refinement(
-        result.asTerm.tpe,
-        "apply",
-        mt
-      ).asType match
-        case '[t] => '{ $result.asInstanceOf[t]: t }
-    }
   @experimental
   def memoizeRefinement(using
       q1: Quotes
@@ -295,11 +285,16 @@ object Macros:
     // reasonable extent and a little beyond
     refinementType match
       case mt @ MethodType(_, args, rt) if closureType.isContextFunctionType =>
-        return memoizeContextFunction(original, storageType)(
+        val unrefined = memoizeContextFunction(original, storageType)(
           args,
-          rt,
-          Some(mt)
+          rt
         )
+        return Refinement(
+          unrefined.asTerm.tpe,
+          "apply",
+          mt
+        ).asType match
+          case '[t] => '{ $unrefined.asInstanceOf[t]: t }
       case _ => ()
 
     val parents =

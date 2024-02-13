@@ -1,4 +1,4 @@
-name := "Scala 3 - Memoization"
+name := "scala3-memoization"
 version := "0.1.0"
 scalaVersion := "3.3.1"
 

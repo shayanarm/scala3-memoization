@@ -172,17 +172,14 @@ object Macros:
   ): Expr[Any] =
     import quotes.reflect.*
     def withStorage[A](using Type[A])(f: Expr[Storage => A]): Expr[A] =
-      storageType.asType match
-        case '[Storage.WeakHashMap] =>
-          '{
-            val storage = new Storage.WeakHashMap {};
-            ${ Expr.betaReduce('{ $f(storage) }) }
-          }
-        case '[Storage.HashMap] =>
-          '{
-            val storage = new Storage.HashMap {};
-            ${ Expr.betaReduce('{ $f(storage) }) }
-          }
+      '{
+        val storage: Storage = ${
+          storageType.asType match
+            case '[Storage.WeakHashMap] => '{ new Storage.WeakHashMap {} }
+            case '[Storage.HashMap]     => '{ new Storage.HashMap {} }
+        };
+        ${ Expr.betaReduce('{ $f(storage) }) }
+      }
 
     val result = (args.map(_.asType), rt.asType) match
       case (List('[t1]), '[r]) =>

@@ -48,7 +48,7 @@ lazy val fib: Long => Long = { (n: Long) =>
     case _ => fib(n - 1) + fib(n - 2)
 }.memoized
 // This will be O(n), your original function will run only 36 times. 
-memoFib(35)
+fib(35)
 // The unmemoized version runs 29860703 times on n = 35
 ```
 The memoization is backed by two choices of data structures: 

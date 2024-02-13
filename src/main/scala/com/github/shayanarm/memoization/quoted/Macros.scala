@@ -53,13 +53,6 @@ object Macros:
     val widened = expr.asTerm.tpe.widen.asType match
       case '[w] => '{ ${ expr.asExprOf[w] }: w }
     val result = widened.asTerm.tpe match
-      // This is a polymorphic function
-      case Refinement(
-            tr,
-            "apply",
-            pt: PolyType
-          ) if tr =:= TypeRepr.of[PolyFunction] =>
-        memoizeRefinement(widened.asTerm, storage)(tr, pt)
       // This is a good old monomorphic function with no shenanigans
       case f @ AppliedType(
             TypeRef(_, name),
@@ -74,6 +67,13 @@ object Macros:
             mt: MethodType
           ) if tr.isFunctionType =>
         memoizeRefinement(widened.asTerm, storage)(tr, mt)
+      // This is a polymorphic function
+      case Refinement(
+            tr,
+            "apply",
+            pt: PolyType
+          ) if tr =:= TypeRepr.of[PolyFunction] =>
+        memoizeRefinement(widened.asTerm, storage)(tr, pt)        
       case tpe if tpe.isFunctionType =>
         throw MatchError(
           widened.asTerm.tpe.show(using Printer.TypeReprStructure)
@@ -95,7 +95,7 @@ object Macros:
     import quotes.reflect.*
 
     // We cannot create the context functions using the reflect API. We can however,
-    // Do so using quotations('{...}), so we will cover some arities of context functions to a
+    // Do so using quotations ('{...}), so we will cover some arities of context functions to a
     // reasonable extent and a little beyond
     if original.tpe.isContextFunctionType then
       return memoizeContextFunction(original, storageType)(

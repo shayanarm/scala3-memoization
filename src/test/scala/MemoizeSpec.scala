@@ -1,3 +1,5 @@
+package com.github.shayan.memoization
+
 import memoization._
 import org.scalatest._
 import flatspec._

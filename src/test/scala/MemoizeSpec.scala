@@ -50,7 +50,7 @@ class MemoizeSpec extends AnyFlatSpec with must.Matchers {
   }
 
   it must "memoize context functions the same way it does for normal functions" in {
-    val f = (((x: Int) => (y: Int) ?=> expensive(x + y))).memoized
+    val f: Int => Int ?=> Int = (((x: Int) => (y: Int) ?=> expensive(x + y))).memoized
     given Int = 5
     val (r1: Int, t1) = benchmark(f(1).apply)
     val (r2: Int, t2) = benchmark(f(1).apply)

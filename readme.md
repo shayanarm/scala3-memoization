@@ -36,7 +36,7 @@ Your function signature will remain untouched. Context arguments are treated as 
 val f: Int => Int ?=> Int = (((x: Int) => (y: Int) ?=> expensive(x + y))).memoized
 f(42)(using 21)
 ```
-* You may partially apply your function befor calling `.memoize` to exclude any parameter from being memoized.
+* You may partially apply your function before calling `.memoize` to exclude any parameter from being memoized.
 * Curried functions are also recursively memorized.
 
 What if you need to memoize a recursive function definition? Then, use the lazy val technique to define your memoized function:
@@ -56,7 +56,7 @@ The memoization is backed by two choices of data structures:
 * ```scala.collections.mutable.WeakHashMap``` 
 * ```scala.collections.mutable.HashMap```
 
-The default choice is ```WeakHashMap``` as it reduces the risk of memory leaks. You may however, change that by:
+The default choice is ```WeakHashMap``` as it reduces the risk of memory leaks. You may, however, change that by:
 ```scala
 f.memoized(using scala.collections.mutable.HashMap)
 f.memoized(using scala.collections.mutable.WeakHashMap) // Already the default if unspecified

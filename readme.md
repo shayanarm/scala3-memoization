@@ -51,6 +51,16 @@ lazy val fib: Long => Long = { (n: Long) =>
 // This will be O(n). Your original function will run only 36 times. 
 fib(35)
 // The unmemoized version runs 29860703 times on n = 35
+// --- WARNING ---
+// Don't do it like this:
+// def fib(n: Long): Long =
+//   n match
+//     case 0 | 1 => n
+//     case n if n < 0 =>
+//       throw ArithmeticException()
+//     case _ => fib(n - 1) + fib(n - 2)
+
+// val badMemo = fib.memoized
 ```
 The memoization is backed by two choices of data structures: 
 * ```scala.collections.mutable.WeakHashMap``` 

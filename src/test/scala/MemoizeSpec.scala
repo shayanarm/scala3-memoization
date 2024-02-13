@@ -23,25 +23,17 @@ class MemoizeSpec extends AnyFlatSpec with must.Matchers {
     Thread.sleep(MinExecTime)
     a
 
-  private def fibb(n: Long): Long =
+  private def fib(n: Long): Long =
     n match
       case 0 | 1 => n
       case n if n < 0 =>
         throw ArithmeticException()
-      case _ => fibb(n - 1) + fibb(n - 2)
-
-  private lazy val memoFibb: Long => Long = { (n: Long) =>
-    n match
-      case 0 | 1 => n
-      case n if n < 0 =>
-        throw ArithmeticException()
-      case _ => memoFibb(n - 1) + memoFibb(n - 2)
-  }.memoized    
+      case _ => fib(n - 1) + fib(n - 2)
 
   """
   `f.memoized`
   """ must "memoize a simple identity function with the type parameter applied" in {
-    val f = (expensive[Int]).memoized
+    val f = expensive[Int].memoized
     val (r1, t1) = benchmark(f(1))
     val (r2, t2) = benchmark(f(1))
     r1 mustEqual r2
@@ -197,7 +189,7 @@ class MemoizeSpec extends AnyFlatSpec with must.Matchers {
   }
   it must "memoize a recursively defined function lazy val" in {
     lazy val f: Long => Long = { (n: Long) =>
-        if n == 0 then n else expensive(f(0))
+      if n == 0 then n else expensive(f(0))
     }.memoized
 
     val (r1, t1) = benchmark(f(1))
@@ -207,8 +199,8 @@ class MemoizeSpec extends AnyFlatSpec with must.Matchers {
   }
 
   it must "memoize a recursively defined polymorphic function lazy val" in {
-    lazy val f: [X] => X => Boolean => X = { [X] => (n: X) => (b: Boolean) =>
-        if b then f(n)(false) else expensive(n)
+    lazy val f: [X] => X => Boolean => X = {
+      [X] => (n: X) => (b: Boolean) => if b then f(n)(false) else expensive(n)
     }.memoized
 
     val (r1, t1) = benchmark(f(1)(false))
@@ -217,17 +209,25 @@ class MemoizeSpec extends AnyFlatSpec with must.Matchers {
     assert(t2 < t1)
   }
 
-  it must "properly memoize a recursively defined function lazy val on recursive invocations" in {
-    
-    val wrongFibb = fibb.memoized
+  it must "convert the time complexity of the recursively defined fibonacci function to O(n)" in {
 
     (35 to 40) foreach { n =>
-      val (r1, t1) = benchmark { wrongFibb(n) }
-      val (r2, t2) = benchmark { memoFibb(n) }
-      assert(r1 == r2)
-      assert(t2 < t1)
+      var timesCalculated = 0
+      lazy val memoFib: Long => Long = { (n: Long) =>
+        timesCalculated += 1
+        n match
+          case 0 | 1 => n
+          case n if n < 0 =>
+            throw ArithmeticException()
+          case _ => memoFib(n - 1) + memoFib(n - 2)
+      }.memoized
+      
+      memoFib(n)
+      
+      // Operation must be O(n)
+      timesCalculated mustEqual n + 1
     }
-  }  
+  }
 
   it must "memoize using the storage specified by the user" in {
     val poly = [X] => (x: X) => expensive(x)
@@ -246,4 +246,5 @@ class MemoizeSpec extends AnyFlatSpec with must.Matchers {
 
     // It is impossible to test context functions for this at the moment
   }
+
 }

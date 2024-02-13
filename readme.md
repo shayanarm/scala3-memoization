@@ -9,7 +9,7 @@ def expensive[A](a: => A): A =
   a
 
 // There is only one extension method in the package: 
-import memoization._
+import com.github.shayanarm.memoization._
 
 val efficientInt = expensive[Int].memoized
 

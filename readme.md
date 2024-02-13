@@ -52,7 +52,7 @@ lazy val fib: Long => Long = { (n: Long) =>
 fib(35)
 // The unmemoized version runs 29860703 times on n = 35
 // --- Caution ---
-// Do not do it like this as it will not memorize the recursive
+// Do not do it like this as it will not memoize the recursive
 // invocations inside the function body:
 // def fib(n: Long): Long =
 //   n match

@@ -23,6 +23,21 @@ class MemoizeSpec extends AnyFlatSpec with must.Matchers {
     Thread.sleep(MinExecTime)
     a
 
+  private def fibb(n: Long): Long =
+    n match
+      case 0 | 1 => n
+      case n if n < 0 =>
+        throw ArithmeticException()
+      case _ => fibb(n - 1) + fibb(n - 2)
+
+  private lazy val memoFibb: Long => Long = { (n: Long) =>
+    n match
+      case 0 | 1 => n
+      case n if n < 0 =>
+        throw ArithmeticException()
+      case _ => memoFibb(n - 1) + memoFibb(n - 2)
+  }.memoize    
+
   """
   `f.memoize`
   """ must "memoize a simple identity function with the type parameter applied" in {
@@ -204,21 +219,6 @@ class MemoizeSpec extends AnyFlatSpec with must.Matchers {
 
   it must "make a recursively defined fibonacci lazy val be reliably faster on large inputs" in {
 
-    def fibb(n: Long): Long =
-      n match
-        case 0 | 1 => n
-        case n if n < 0 =>
-          throw ArithmeticException()
-        case _ => fibb(n - 1) + fibb(n - 2)
-
-    lazy val memoFibb: Long => Long = { (n: Long) =>
-      n match
-        case 0 | 1 => n
-        case n if n < 0 =>
-          throw ArithmeticException()
-        case _ => memoFibb(n - 1) + memoFibb(n - 2)
-    }.memoize
-
     (35 to 40) foreach { n =>
       val (r1, t1) = benchmark { fibb(n) }
       val (r2, t2) = benchmark { memoFibb(n) }
@@ -228,27 +228,12 @@ class MemoizeSpec extends AnyFlatSpec with must.Matchers {
   }
 
   it must "properly memoize a recursively defined function lazy val on recursive invocations" in {
-
-    def fibb(n: Long): Long =
-      n match
-        case 0 | 1 => n
-        case n if n < 0 =>
-          throw ArithmeticException()
-        case _ => fibb(n - 1) + fibb(n - 2)
     
     val wrongFibb = fibb.memoize
 
-    lazy val correctFibb: Long => Long = { (n: Long) =>
-      n match
-        case 0 | 1 => n
-        case n if n < 0 =>
-          throw ArithmeticException()
-        case _ => correctFibb(n - 1) + correctFibb(n - 2)
-    }.memoize
-
     (35 to 40) foreach { n =>
       val (r1, t1) = benchmark { wrongFibb(n) }
-      val (r2, t2) = benchmark { correctFibb(n) }
+      val (r2, t2) = benchmark { memoFibb(n) }
       assert(r1 == r2)
       assert(t2 < t1)
     }

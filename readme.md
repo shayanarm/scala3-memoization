@@ -47,7 +47,7 @@ lazy val fib: Long => Long = { (n: Long) =>
       throw ArithmeticException()
     case _ => fib(n - 1) + fib(n - 2)
 }.memoized
-// This will be O(n), your original function will run only 36 times. 
+// This will be O(n). your original function will run only 36 times. 
 fib(35)
 // The unmemoized version runs 29860703 times on n = 35
 ```

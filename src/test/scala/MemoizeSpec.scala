@@ -36,12 +36,12 @@ class MemoizeSpec extends AnyFlatSpec with must.Matchers {
       case n if n < 0 =>
         throw ArithmeticException()
       case _ => memoFibb(n - 1) + memoFibb(n - 2)
-  }.memoize    
+  }.memoized    
 
   """
-  `f.memoize`
+  `f.memoized`
   """ must "memoize a simple identity function with the type parameter applied" in {
-    val f = (expensive[Int]).memoize
+    val f = (expensive[Int]).memoized
     val (r1, t1) = benchmark(f(1))
     val (r2, t2) = benchmark(f(1))
     r1 mustEqual r2
@@ -50,7 +50,7 @@ class MemoizeSpec extends AnyFlatSpec with must.Matchers {
 
   it must "memoize a curried function" in {
     val f: (Int => (String, Char) => (Int, String, Char)) =
-      (((a: Int) => (b: String, c: Char) => expensive(a, b, c))).memoize
+      (((a: Int) => (b: String, c: Char) => expensive(a, b, c))).memoized
     val (r1, t1) = benchmark(f(42)("foo", 'c'))
     val (r2, t2) = benchmark(f(42)("foo", 'c'))
     r1 mustEqual r2
@@ -58,7 +58,7 @@ class MemoizeSpec extends AnyFlatSpec with must.Matchers {
   }
 
   it must "memoize context functions the same way it does for normal functions" in {
-    val f = (((x: Int) => (y: Int) ?=> expensive(x + y))).memoize
+    val f = (((x: Int) => (y: Int) ?=> expensive(x + y))).memoized
     given Int = 5
     val (r1: Int, t1) = benchmark(f(1).apply)
     val (r2: Int, t2) = benchmark(f(1).apply)
@@ -67,7 +67,7 @@ class MemoizeSpec extends AnyFlatSpec with must.Matchers {
   }
 
   it must "memoize a Function0" in {
-    val f = (() => expensive(42)).memoize
+    val f = (() => expensive(42)).memoized
     val (r1, t1) = benchmark(f())
     val (r2, t2) = benchmark(f())
     r1 mustEqual r2
@@ -77,7 +77,7 @@ class MemoizeSpec extends AnyFlatSpec with must.Matchers {
   it must "memoize a monomorphic function with dependent arguments" in {
     val x = 42
     val f =
-      (((a: x.type) => (b: Int) ?=> (c: b.type) => expensive((a, b)))).memoize
+      (((a: x.type) => (b: Int) ?=> (c: b.type) => expensive((a, b)))).memoized
     val (r1, t1) = benchmark(f(x)(using 15)(15))
     val (r2, t2) = benchmark(f(x)(using 15)(15))
     r1 mustEqual r2
@@ -85,7 +85,7 @@ class MemoizeSpec extends AnyFlatSpec with must.Matchers {
   }
 
   it must "memoize a polymorphic identity function" in {
-    val f = ([X] => (x: X) => expensive(x)).memoize
+    val f = ([X] => (x: X) => expensive(x)).memoized
     val (r1, t1) = benchmark(f[Int](1))
     val (r2, t2) = benchmark(f[String]("foo"))
     val (r3, t3) = benchmark(f[Int](1))
@@ -97,7 +97,7 @@ class MemoizeSpec extends AnyFlatSpec with must.Matchers {
   }
 
   it must "memoize a polymorphic binary function" in {
-    val f = ([X, Y] => (x: X, y: Y) => expensive((x, y))).memoize
+    val f = ([X, Y] => (x: X, y: Y) => expensive((x, y))).memoized
     val (r1, t1) = benchmark(f[Int, String](1, "bar"))
     val (r2, t2) = benchmark(f[String, Int]("foo", 42))
     val (r3, t3) = benchmark(f[Int, String](1, "bar"))
@@ -110,7 +110,7 @@ class MemoizeSpec extends AnyFlatSpec with must.Matchers {
 
   it must "memoize a curried polymorphic function" in {
     val f =
-      ([X, Y, Z] => (x: X) => (y: Y, z: Z) => expensive((x, y, z))).memoize
+      ([X, Y, Z] => (x: X) => (y: Y, z: Z) => expensive((x, y, z))).memoized
     val (r1, t1) = benchmark(f[Int, String, Char](1)("foo", 'c'))
     val (r2, t2) = benchmark(f[Boolean, Double, Int](false)(5d, 3))
     val (r3, t3) = benchmark(f[Int, String, Char](1)("foo", 'c'))
@@ -123,7 +123,7 @@ class MemoizeSpec extends AnyFlatSpec with must.Matchers {
 
   it must "memoize a polymorphic function nested inside a monomorphic function" in {
     val f = ((x: Int) => [Y, Z] => (y: Y, z: Z) => expensive((x, y, z)))
-      .memoize(using HashMap)
+      .memoized(using HashMap)
     val (r1, t1) = benchmark(f(1)("foo", 'c'))
     val (r2, t2) = benchmark(f(1)(5d, 3))
     val (r3, t3) = benchmark(f(1)("foo", 'c'))
@@ -136,7 +136,7 @@ class MemoizeSpec extends AnyFlatSpec with must.Matchers {
 
   it must "memoize a polymorphic function with dependent arguments" in {
     val f =
-      (([X] => (a: X) => (b: a.type) => expensive(a, b))).memoize
+      (([X] => (a: X) => (b: a.type) => expensive(a, b))).memoized
     val (r1, t1) = benchmark(f[Int](42)(42))
     val (r2, t2) = benchmark(f[Int](42)(42))
     r1 mustEqual r2
@@ -146,7 +146,7 @@ class MemoizeSpec extends AnyFlatSpec with must.Matchers {
   it must "memoize a polymorphic function with a type parameter bounded by another type parameter" in {
     case class Base()
     class Extended extends Base()
-    val f = ([A, B <: A] => (a: A, b: B) => expensive((a, b))).memoize
+    val f = ([A, B <: A] => (a: A, b: B) => expensive((a, b))).memoized
     val (r1, t1) = benchmark(f(Base(), Extended()))
     val (r2, t2) = benchmark(f(Base(), Extended()))
     r1 mustEqual r2
@@ -154,7 +154,7 @@ class MemoizeSpec extends AnyFlatSpec with must.Matchers {
   }
 
   it must "memoize nested polymorphic functions" in {
-    val f = ([X] => (x: X) => [Y] => (y: Y) => expensive((x, y))).memoize
+    val f = ([X] => (x: X) => [Y] => (y: Y) => expensive((x, y))).memoized
     val (r1, t1) = benchmark(f(1)("foo"))
     val (r2, t2) = benchmark(f(1)(5L))
     val (r3, t3) = benchmark(f(1)("foo"))
@@ -171,7 +171,7 @@ class MemoizeSpec extends AnyFlatSpec with must.Matchers {
             A,
             M[_ <: A]
         ] => (arg: M[A], b: arg.type) => expensive(arg)
-    ).memoize
+    ).memoized
     val arg13 = Some(42)
     val arg24 = List(42)
     val (r1, t1) = benchmark(f[Int, Option](arg13, arg13))
@@ -185,7 +185,7 @@ class MemoizeSpec extends AnyFlatSpec with must.Matchers {
   }
 
   it must "memoize a polymorphic context function (Wow! Who does that?!)" in {
-    val f = ([X] => (x: X) ?=> expensive(x)).memoize
+    val f = ([X] => (x: X) ?=> expensive(x)).memoized
     val (r1, t1) = benchmark(f[Int](using 5))
     val (r2, t2) = benchmark(f[String](using "foo"))
     val (r3, t3) = benchmark(f[Int](using 5))
@@ -198,7 +198,7 @@ class MemoizeSpec extends AnyFlatSpec with must.Matchers {
   it must "memoize a recursively defined function lazy val" in {
     lazy val f: Long => Long = { (n: Long) =>
         if n == 0 then n else expensive(f(0))
-    }.memoize
+    }.memoized
 
     val (r1, t1) = benchmark(f(1))
     val (r2, t2) = benchmark(f(1))
@@ -209,27 +209,17 @@ class MemoizeSpec extends AnyFlatSpec with must.Matchers {
   it must "memoize a recursively defined polymorphic function lazy val" in {
     lazy val f: [X] => X => Boolean => X = { [X] => (n: X) => (b: Boolean) =>
         if b then f(n)(false) else expensive(n)
-    }.memoize
+    }.memoized
 
     val (r1, t1) = benchmark(f(1)(false))
     val (r2, t2) = benchmark(f(1)(false))
     r1 mustEqual r2
     assert(t2 < t1)
-  }  
-
-  it must "make a recursively defined fibonacci lazy val be reliably faster on large inputs" in {
-
-    (35 to 40) foreach { n =>
-      val (r1, t1) = benchmark { fibb(n) }
-      val (r2, t2) = benchmark { memoFibb(n) }
-      assert(r1 == r2)
-      assert(t2 < t1)
-    }
   }
 
   it must "properly memoize a recursively defined function lazy val on recursive invocations" in {
     
-    val wrongFibb = fibb.memoize
+    val wrongFibb = fibb.memoized
 
     (35 to 40) foreach { n =>
       val (r1, t1) = benchmark { wrongFibb(n) }
@@ -238,4 +228,22 @@ class MemoizeSpec extends AnyFlatSpec with must.Matchers {
       assert(t2 < t1)
     }
   }  
+
+  it must "memoize using the storage specified by the user" in {
+    val poly = [X] => (x: X) => expensive(x)
+    val f = poly.memoized(using scala.collection.mutable.WeakHashMap)
+    val g = poly.memoized(using scala.collection.mutable.HashMap)
+
+    assert(f.isInstanceOf[Storage.WeakHashMap])
+    assert(g.isInstanceOf[Storage.HashMap])
+
+    val mono = (x: Int) => expensive(x)
+    val x = mono.memoized(using scala.collection.mutable.WeakHashMap)
+    val y = mono.memoized(using scala.collection.mutable.HashMap)
+
+    assert(x.isInstanceOf[Storage.WeakHashMap])
+    assert(y.isInstanceOf[Storage.HashMap])
+
+    // It is impossible to test context functions for this at the moment
+  }
 }

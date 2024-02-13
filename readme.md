@@ -32,7 +32,7 @@ efficientAll("foo") // nor this
 ```
 Your function signature will remain untouched. Context arguments are treated as normal arguments and are still memoized:
 ```scala
-val f: Int => (Int) ?=> Int = (((x: Int) => (y: Int) ?=> expensive(x + y))).memoized
+val f: Int => Int ?=> Int = (((x: Int) => (y: Int) ?=> expensive(x + y))).memoized
 f(42)(using 21)
 ```
 * You may partially apply your function to exclude any parameter from being memoized.
@@ -57,6 +57,6 @@ The memoization is backed by two choices of data structures:
 
 The default choice is ```WeakHashMap``` as it reduces the risk of memory leaks. You may however, change that by:
 ```scala
-myfunc.memoized(using scala.collections.mutable.HashMap)
-myfunc.memoized(using scala.collections.mutable.WeakHashMap) // this is already the default if unspecified
+f.memoized(using scala.collections.mutable.HashMap)
+f.memoized(using scala.collections.mutable.WeakHashMap) // this is already the default if unspecified
 ```

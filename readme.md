@@ -2,7 +2,7 @@
  
 This small *Scala 3* library provides macro-generated memoization for functions of all arities, signatures, and even polymorphic function values. Your memoized function signature is guaranteed to remain identical to the original.
 
-***Note:*** The library is marked ```@experimental``` as the macro features used to write it are also ```@experimental```. I will remove the requirement once Scala eventually stabilizes the `quoted.*` API.
+***Note:*** The library is marked ```@experimental``` as the macro features used to write it are also ```@experimental```. I will remove the requirement once Scala eventually stabilizes the `quoted.reflect.*` API.
 ```scala
 def expensive[A](a: => A): A =
   Thread.sleep(1000)
@@ -10,7 +10,7 @@ def expensive[A](a: => A): A =
 
 // There is only one extension method in the package: 
 
-import com.github.shayanarm.memoization.memoized
+import io.github.shayanarm.memoization.memoized
 
 val efficientInt = expensive[Int].memoized
 

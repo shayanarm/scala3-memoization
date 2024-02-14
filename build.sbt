@@ -14,7 +14,7 @@ inThisBuild(List(
 ))
 
 name := "scala3-memoization"
-
+version := "0.1.0"
 crossScalaVersions := Seq("3.3.1")
 scalaVersion := crossScalaVersions.value.head
 

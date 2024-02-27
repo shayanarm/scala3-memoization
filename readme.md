@@ -63,7 +63,7 @@ fib(35)
 
 // val badFib = fib.memoized
 ```
-The memoization is backed by two choices of data structures: 
+Memoization is backed by two choices of data structures: 
 * ```scala.collections.mutable.WeakHashMap``` 
 * ```scala.collections.mutable.HashMap```
 
